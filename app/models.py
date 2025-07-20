@@ -41,3 +41,33 @@ class ProtectionSetting(Base):
     mode = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     owner = relationship("User", back_populates="protection_settings")
+
+class UrlEvent(Base):
+    __tablename__ = "url_events"
+    id        = Column(Integer, primary_key=True, index=True)
+    user_id   = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    url       = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    owner     = relationship("User", back_populates="url_events")
+
+class TrainingJob(Base):
+    __tablename__  = "training_jobs"
+    id            = Column(Integer, primary_key=True, index=True)
+    user_id       = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+    status        = Column(String, default="pending")  # pending, running, done, failed
+    started_at    = Column(DateTime, nullable=True)
+    completed_at  = Column(DateTime, nullable=True)
+    owner         = relationship("User", back_populates="training_jobs")
+
+class OptimizedModel(Base):
+    __tablename__  = "optimized_models"
+    id             = Column(Integer, primary_key=True, index=True)
+    training_id    = Column(Integer, ForeignKey("training_jobs.id", ondelete="CASCADE"))
+    path           = Column(Text, nullable=False)        # 모델 파일 경로
+    created_at     = Column(DateTime, default=datetime.datetime.utcnow)
+    job            = relationship("TrainingJob", back_populates="optimized_model")
+
+# User 모델에 새 관계 추가
+User.url_events             = relationship("UrlEvent",      back_populates="owner")
+User.training_jobs          = relationship("TrainingJob",   back_populates="owner")
+TrainingJob.optimized_model = relationship("OptimizedModel", back_populates="job", uselist=False)
