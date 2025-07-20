@@ -1,23 +1,21 @@
 # scripts/convert_to_onnx.py
-import argparse, os, torch
-from train import SimpleModel
+import os
+import torch
+from my_model import Net
 
-def main(input_path: str, output: str):
-    os.makedirs(os.path.dirname(output), exist_ok=True)
-    m = SimpleModel(in_dim=4)          # input_dim은 전처리 컬럼 개수로 조정
-    m.load_state_dict(torch.load(input_path))
-    m.eval()
-    dummy = torch.randn(1, m.net[0].in_features)
+def main():
+    os.makedirs("models/onnx", exist_ok=True)
+    model = Net()
+    model.load_state_dict(torch.load("models/pth/latest.pth"))
+    model.eval()
+    dummy = torch.randn(1, 3, 224, 224)
     torch.onnx.export(
-        m, dummy, output,
+        model, dummy,
+        "models/onnx/latest.onnx",
         input_names=["input"], output_names=["output"],
-        dynamic_axes={"input":{0:"batch"}, "output":{0:"batch"}}
+        opset_version=12
     )
-    print(f"[onnx] exported to {output}")
+    print("ONNX export done.")
 
-if __name__=="__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("--input",  required=True)
-    p.add_argument("--output", required=True)
-    args = p.parse_args()
-    main(args.input, args.output)
+if __name__ == "__main__":
+    main()
