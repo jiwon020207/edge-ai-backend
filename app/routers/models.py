@@ -1,27 +1,34 @@
-from fastapi import APIRouter, Depends, HTTPException
+# app/routers/models.py
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
+from app.database import get_db, SessionLocal
 import app.crud as crud, app.schemas as schemas
-from app.database import get_db
 from app.routers.auth import get_current_user
+import subprocess, os
 
 router = APIRouter(prefix="/api/v1/models", tags=["models"])
 
-@router.post("/train", response_model=schemas.TrainingJobOut)
-def start_training(db: Session = Depends(get_db),
-                   current_user=Depends(get_current_user)):
-    return crud.create_training_job(db, current_user.id)
-
-@router.get("/train/{job_id}", response_model=schemas.TrainingJobOut)
-def get_training_status(job_id: int, db: Session = Depends(get_db),
-                        current_user=Depends(get_current_user)):
+def run_training(job_id: int):
+    db = SessionLocal()
     job = crud.get_training_job(db, job_id)
-    if not job or job.user_id != current_user.id:
-        raise HTTPException(404, "Job not found")
-    return job
+    crud.update_training_status(db, job, "running")
+    try:
+        # 예: python scripts/train.py --data data/processed --model-output models/{job_id}.pth
+        subprocess.run([
+            "python", "scripts/train.py",
+            "--data-dir", "data/processed",
+            "--output", f"models/{job_id}.pth"
+        ], check=True)
+        crud.update_training_status(db, job, "completed")
+    except Exception:
+        crud.update_training_status(db, job, "failed")
+    finally:
+        db.close()
 
-@router.post("/optimize/{job_id}", response_model=schemas.OptimizeOut)
-def optimize_model(job_id: int, db: Session = Depends(get_db),
+@router.post("/train", response_model=schemas.TrainingJobOut)
+def start_training(background_tasks: BackgroundTasks,
+                   db: Session = Depends(get_db),
                    current_user=Depends(get_current_user)):
-    # TODO: ONNX 변환 로직 후 실제 경로 지정
-    path = f"/models/{job_id}.onnx"
-    return crud.create_optimized_model(db, job_id, path)
+    job = crud.create_training_job(db, current_user.id)
+    background_tasks.add_task(run_training, job.id)
+    return job
