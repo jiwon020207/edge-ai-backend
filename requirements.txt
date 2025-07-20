@@ -9,3 +9,4 @@ email-validator
 pandas
 torch
 onnxruntime
+Pillow
