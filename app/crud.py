@@ -39,3 +39,32 @@ def delete_protection(db: Session, prot_id: int):
     prot = db.query(models.ProtectionSetting).get(prot_id)
     if prot:
         db.delete(prot); db.commit()
+
+def create_url_event(db: Session, user_id: int, evt: schemas.UrlEventCreate):
+    db_evt = models.UrlEvent(
+        user_id=user_id,
+        url=evt.url,
+        timestamp=evt.timestamp
+    )
+    db.add(db_evt); db.commit(); db.refresh(db_evt)
+    return db_evt
+
+def get_url_events_by_user(db: Session, user_id: int):
+    return db.query(models.UrlEvent).filter(models.UrlEvent.user_id == user_id).all()
+
+# 배치 전처리 잡 생성·상태 조회
+
+def create_training_job(db: Session, user_id: int):
+    job = models.TrainingJob(user_id=user_id, status="pending")
+    db.add(job); db.commit(); db.refresh(job)
+    return job
+
+def get_training_job(db: Session, job_id: int):
+    return db.query(models.TrainingJob).get(job_id)
+
+# 최적화 모델 생성
+
+def create_optimized_model(db: Session, training_id: int, path: str):
+    opt = models.OptimizedModel(training_id=training_id, path=path)
+    db.add(opt); db.commit(); db.refresh(opt)
+    return opt
