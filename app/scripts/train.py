@@ -1,6 +1,6 @@
 # scripts/train.py
 import torch
-from my_model import Net  # 여러분 모델 정의 모듈
+from app.scripts.my_model import Net  # 여러분 모델 정의 모듈
 
 def main():
     # 1) 데이터 로드 (예: torch.utils.data.Dataset)
