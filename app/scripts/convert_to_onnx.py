@@ -1,7 +1,7 @@
 # scripts/convert_to_onnx.py
 import os
 import torch
-from my_model import Net
+from app.scripts.my_model import Net
 
 def main():
     os.makedirs("models/onnx", exist_ok=True)
